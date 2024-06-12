@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
             close(clnt_sock);
             pthread_mutex_unlock(&mutx);
             continue;
+        }else{
+            write(clnt_sock,"접속한 인원: %s\n",clnt_names[clnt_cnt]);
         }
 
         strcpy(clnt_names[clnt_cnt], clnt_name);
