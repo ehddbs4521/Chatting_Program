@@ -16,6 +16,7 @@ void send_msg(char *msg, char *source, int len);
 void error_handling(char *msg);
 void send_msg_only_one(char *msg, char *source, int len);
 void remove_first_word(const char *input, char *source, char *output);
+int check_duplicate_name(char *name);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -56,16 +57,22 @@ int main(int argc, char *argv[])
         if (clnt_sock == -1)
             error_handling("accept() error");
 
-        int str_len = read(clnt_sock, clnt_names[clnt_cnt], NAME_SIZE - 1);
+        int str_len = read(clnt_sock, clnt_name, NAME_SIZE - 1);
 
         if (str_len == -1)
             error_handling("read() error");
 
-        clnt_names[clnt_cnt][str_len] = '\0';
-
-        printf("접속한 사용자 : %s\n", clnt_names[clnt_cnt]);
+        clnt_name[str_len] = '\0';
 
         pthread_mutex_lock(&mutx);
+        if (check_duplicate_name(clnt_name)) {
+            write(clnt_sock, "이름 중복", strlen("이름 중복"));
+            close(clnt_sock);
+            pthread_mutex_unlock(&mutx);
+            continue;
+        }
+
+        strcpy(clnt_names[clnt_cnt], clnt_name);
         clnt_socks[clnt_cnt++] = clnt_sock;
         pthread_mutex_unlock(&mutx);
 
@@ -78,15 +85,24 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+int check_duplicate_name(char *name) {
+    for (int i = 0; i < clnt_cnt; i++) {
+        if (strcmp(clnt_names[i], name) == 0) {
+            return 1; // Duplicate found
+        }
+    }
+    return 0; // No duplicate
+}
+
 void *handle_clnt(void *arg)
 {
     int clnt_sock = *((int *)arg);
     int str_len = 0, i;
     char msg[BUF_SIZE];
-    char source[NAME_SIZE]; 
+    char source[NAME_SIZE];
 
     while ((str_len = read(clnt_sock, msg, sizeof(msg) - 1)) != 0) {
-        msg[str_len] = '\0'; 
+        msg[str_len] = '\0';
 
         char modified[BUF_SIZE] = {0};
 
@@ -100,12 +116,12 @@ void *handle_clnt(void *arg)
     }
 
     pthread_mutex_lock(&mutx);
-    for (i = 0; i < clnt_cnt; i++) { 
+    for (i = 0; i < clnt_cnt; i++) {
 
         if (clnt_sock == clnt_socks[i]) {
             while (i < clnt_cnt - 1) {
                 clnt_socks[i] = clnt_socks[i + 1];
-                strcpy(clnt_names[i], clnt_names[i + 1]); 
+                strcpy(clnt_names[i], clnt_names[i + 1]);
                 i++;
             }
             break;
@@ -125,7 +141,7 @@ void send_msg(char *msg, char *source, int len)
 
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++)
-        write(clnt_socks[i], everyone_msg, strlen(everyone_msg));  
+        write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
     pthread_mutex_unlock(&mutx);
 }
 
@@ -149,7 +165,7 @@ void send_msg_only_one(char *msg, char *source, int len)
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++) {
         if (!strcmp(clnt_names[i], target_name)) {
-            write(clnt_socks[i], specific_msg, strlen(specific_msg));  
+            write(clnt_socks[i], specific_msg, strlen(specific_msg));
             break;
         }
     }

@@ -29,6 +29,11 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    if (!strcmp(argv[3], "all")) {
+        printf("사용자의 이름이 all이면 안됩니다.\n");
+        exit(1);
+    }
+
     sprintf(name, "%s", argv[3]);
     sock = socket(PF_INET, SOCK_STREAM, 0);
 
@@ -77,12 +82,18 @@ void *recv_msg(void *arg)
     int str_len;
 
     while (1) {
-        memset(name_msg, 0, sizeof(name_msg)); 
+        memset(name_msg, 0, sizeof(name_msg));
         str_len = read(sock, name_msg, sizeof(name_msg) - 1);
         if (str_len == -1)
             return (void *)-1;
 
         name_msg[str_len] = 0;
+        if (strcmp(name_msg, "이름 중복") == 0) {
+            printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
+            close(sock);
+            exit(1);
+        }
+
         fputs(name_msg, stdout);
     }
     return NULL;
@@ -97,12 +108,13 @@ void error_handling(char *msg)
 
 void welcome_message()
 {
-    printf("=========Temporary Room=========\n");
+    printf("=========Temporary Room==========\n");
     printf("\n 기능 리스트 (문자열)\n\n\n");
     printf("m : 방 만들기\n");
     printf("e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
     printf("o : 방 나가기\n");
     printf("q : 채팅웹 종료\n");
     printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n");
+    printf("@all : 모든 사용자에게 채팅 전달하기\n");
     printf("\n================================\n\n\n");
 }
