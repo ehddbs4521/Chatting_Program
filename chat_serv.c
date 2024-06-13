@@ -15,8 +15,10 @@ void *handle_clnt(void *arg);
 void send_msg(char *msg, char *source, int len);
 void error_handling(char *msg);
 void send_msg_only_one(char *msg, char *source, int len);
-void remove_first_word(const char *input, char *source, char *output);
+void send_msg_all(char *msg, char *source, int len);
+void remove_first_word(const char *input, char *source, char *option, char *output);
 int check_duplicate_name(char *name);
+int check_annotation_option_user_name(char *option);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -63,15 +65,15 @@ int main(int argc, char *argv[])
             error_handling("read() error");
 
         clnt_name[str_len] = '\0';
-
+        
         pthread_mutex_lock(&mutx);
         if (check_duplicate_name(clnt_name)) {
             write(clnt_sock, "이름 중복", strlen("이름 중복"));
             close(clnt_sock);
             pthread_mutex_unlock(&mutx);
             continue;
-        }else{
-            write(clnt_sock,"접속한 인원: %s\n",clnt_names[clnt_cnt]);
+        } else {
+            printf("접속한 사용자명: %s\n", clnt_name);
         }
 
         strcpy(clnt_names[clnt_cnt], clnt_name);
@@ -89,11 +91,15 @@ int main(int argc, char *argv[])
 
 int check_duplicate_name(char *name) {
     for (int i = 0; i < clnt_cnt; i++) {
-        if (strcmp(clnt_names[i], name) == 0) {
-            return 1; // Duplicate found
+        if (!strcmp(clnt_names[i], name)) {
+            return 1;
         }
     }
-    return 0; // No duplicate
+    return 0;
+}
+
+int check_option_equals_all(char *name) {
+    return !strcmp(name, "all");
 }
 
 void *handle_clnt(void *arg)
@@ -107,19 +113,28 @@ void *handle_clnt(void *arg)
         msg[str_len] = '\0';
 
         char modified[BUF_SIZE] = {0};
+        char option[BUF_SIZE] = {0};
 
-        remove_first_word(msg, source, modified);
-
-        if (modified[0] == '@') {
+        remove_first_word(msg, source, option, modified);
+        int opt=check_annotation_option_user_name(option);
+        
+        switch (opt)
+        {
+        case 1:
             send_msg_only_one(modified, source, strlen(modified));
-        } else {
+            break;
+        case 2:
+            send_msg_all(modified, source, strlen(modified));
+            break;
+        default:
             send_msg(modified, source, strlen(modified));
+            break;
         }
+        
     }
 
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++) {
-
         if (clnt_sock == clnt_socks[i]) {
             while (i < clnt_cnt - 1) {
                 clnt_socks[i] = clnt_socks[i + 1];
@@ -147,26 +162,20 @@ void send_msg(char *msg, char *source, int len)
     pthread_mutex_unlock(&mutx);
 }
 
+void send_msg_all(char *msg, char *source, int len) {
+    send_msg(msg, source, len);
+}
+
 void send_msg_only_one(char *msg, char *source, int len)
 {
     int i;
-    char target_name[NAME_SIZE];
-    char *msg_body;
-    sscanf(msg, "@%s", target_name);
-    msg_body = strchr(msg, ' ');
-
-    if (msg_body != NULL) {
-        msg_body++;
-    } else {
-        return;
-    }
 
     char specific_msg[BUF_SIZE];
-    snprintf(specific_msg, sizeof(specific_msg), "%s >> %s", source, msg_body);
+    snprintf(specific_msg, sizeof(specific_msg), "%s >> %s", source, msg);
 
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++) {
-        if (!strcmp(clnt_names[i], target_name)) {
+        if (!strcmp(clnt_names[i], source)) {
             write(clnt_socks[i], specific_msg, strlen(specific_msg));
             break;
         }
@@ -181,10 +190,25 @@ void error_handling(char *msg)
     exit(1);
 }
 
-void remove_first_word(const char *input, char *source, char *output)
+int check_annotation_option_user_name(char *option) {
+    
+    char target_name[NAME_SIZE];
+    sscanf(option, "@%s", target_name);
+    
+    if (check_duplicate_name(target_name)) {
+        printf("1\n");
+        return 1;
+    } else if (check_option_equals_all(target_name)) {
+        printf("2\n");
+        return 2;
+    }
+    printf("0\n");
+    return 0;
+}
+
+void remove_first_word(const char *input, char *source, char *option, char *output)
 {
-    int i = 0;
-    int j = 0;
+    int i = 0, j = 0, k = 0;
 
     while (input[i] != ' ' && input[i] != '\0') {
         source[i] = input[i];
@@ -197,8 +221,20 @@ void remove_first_word(const char *input, char *source, char *output)
         i++;
     }
 
+    if (input[i] == '@') {
+        while (input[i] != ' ' && input[i] != '\0') {
+            option[k++] = input[i++];
+        }
+        option[k] = '\0';
+        if (input[i] == ' ') {
+            i++;
+        }
+    }
+
     while (input[i] != '\0') {
         output[j++] = input[i++];
     }
+
     output[j] = '\0';
+
 }
