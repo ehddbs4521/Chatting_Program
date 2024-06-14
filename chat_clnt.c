@@ -110,7 +110,7 @@ void welcome_message()
 {
     printf("=========Temporary Room==========\n");
     printf("\n 기능 리스트 (문자열)\n\n\n");
-    printf("@m : 방 만들기\n");
+    printf("@m 방번호 : 방 만들기 \t ex) m 1\n");
     printf("@e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
     printf("@o : 방 나가기\n");
     printf("@q : 채팅웹 종료\n");
