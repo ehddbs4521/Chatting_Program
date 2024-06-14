@@ -64,7 +64,7 @@ void *send_msg(void *arg)
 
     while (1) {
         fgets(msg, BUF_SIZE, stdin);
-        if (!strcmp(msg, "q\n") || !strcmp(msg, "Q\n")) {
+        if (!strcmp(msg, "@q\n") || !strcmp(msg, "@Q\n")) {
             close(sock);
             exit(0);
         }
@@ -110,10 +110,10 @@ void welcome_message()
 {
     printf("=========Temporary Room==========\n");
     printf("\n 기능 리스트 (문자열)\n\n\n");
-    printf("m : 방 만들기\n");
-    printf("e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
-    printf("o : 방 나가기\n");
-    printf("q : 채팅웹 종료\n");
+    printf("@m : 방 만들기\n");
+    printf("@e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
+    printf("@o : 방 나가기\n");
+    printf("@q : 채팅웹 종료\n");
     printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n");
     printf("@all : 모든 사용자에게 채팅 전달하기\n");
     printf("\n================================\n\n\n");

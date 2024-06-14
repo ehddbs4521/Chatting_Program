@@ -14,11 +14,11 @@
 void *handle_clnt(void *arg);
 void send_msg(char *msg, char *source, int len);
 void error_handling(char *msg);
-void send_msg_only_one(char *msg, char *source, int len);
+void send_msg_only_one(char *msg, char *source, char *target,int len);
 void send_msg_all(char *msg, char *source, int len);
 void remove_first_word(const char *input, char *source, char *option, char *output);
 int check_duplicate_name(char *name);
-int check_annotation_option_user_name(char *option);
+int check_annotation_option_user_name(char *option, char *target);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -108,6 +108,7 @@ void *handle_clnt(void *arg)
     int str_len = 0, i;
     char msg[BUF_SIZE];
     char source[NAME_SIZE];
+    char target[NAME_SIZE];
 
     while ((str_len = read(clnt_sock, msg, sizeof(msg) - 1)) != 0) {
         msg[str_len] = '\0';
@@ -116,12 +117,12 @@ void *handle_clnt(void *arg)
         char option[BUF_SIZE] = {0};
 
         remove_first_word(msg, source, option, modified);
-        int opt=check_annotation_option_user_name(option);
+        int opt=check_annotation_option_user_name(option,target);
         
         switch (opt)
         {
         case 1:
-            send_msg_only_one(modified, source, strlen(modified));
+            send_msg_only_one(modified, source, target, strlen(modified));
             break;
         case 2:
             send_msg_all(modified, source, strlen(modified));
@@ -166,7 +167,7 @@ void send_msg_all(char *msg, char *source, int len) {
     send_msg(msg, source, len);
 }
 
-void send_msg_only_one(char *msg, char *source, int len)
+void send_msg_only_one(char *msg, char *source, char *target,int len)
 {
     int i;
 
@@ -175,7 +176,7 @@ void send_msg_only_one(char *msg, char *source, int len)
 
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++) {
-        if (!strcmp(clnt_names[i], source)) {
+        if (!strcmp(clnt_names[i], target)) {
             write(clnt_socks[i], specific_msg, strlen(specific_msg));
             break;
         }
@@ -190,15 +191,14 @@ void error_handling(char *msg)
     exit(1);
 }
 
-int check_annotation_option_user_name(char *option) {
+int check_annotation_option_user_name(char *option, char *target) {
     
-    char target_name[NAME_SIZE];
-    sscanf(option, "@%s", target_name);
-    
-    if (check_duplicate_name(target_name)) {
+    sscanf(option, "@%s", target);
+
+    if (check_duplicate_name(target)) {
         printf("1\n");
         return 1;
-    } else if (check_option_equals_all(target_name)) {
+    } else if (check_option_equals_all(target)) {
         printf("2\n");
         return 2;
     }
