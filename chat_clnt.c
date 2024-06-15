@@ -6,13 +6,14 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#define BUF_SIZE 100
+#define BUF_SIZE 500
 #define NAME_SIZE 20
 
 void *send_msg(void *arg);
 void *recv_msg(void *arg);
 void error_handling(char *msg);
 void welcome_message();
+void remove_newline(char *str);
 
 char name[NAME_SIZE] = "[DEFAULT]";
 char msg[BUF_SIZE];
@@ -29,8 +30,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (!strcmp(argv[3], "all")) {
-        printf("사용자의 이름이 all이면 안됩니다.\n");
+    // 사용자 이름이 명령어와 동일하지 않도록 확인
+    if (!strcmp(argv[3], "all") || !strcmp(argv[3], "m") || !strcmp(argv[3], "l")) {
+        printf("사용자의 이름이 명령어와 같으면 안됩니다.\n");
         exit(1);
     }
 
@@ -68,9 +70,9 @@ void *send_msg(void *arg)
             close(sock);
             exit(0);
         }
-
         snprintf(name_msg, sizeof(name_msg), "%s %s", name, msg);
         write(sock, name_msg, strlen(name_msg));
+        
     }
     return NULL;
 }
@@ -78,23 +80,25 @@ void *send_msg(void *arg)
 void *recv_msg(void *arg)
 {
     int sock = *((int *)arg);
-    char name_msg[NAME_SIZE + BUF_SIZE];
+    char msg[NAME_SIZE + BUF_SIZE];
     int str_len;
-
     while (1) {
-        memset(name_msg, 0, sizeof(name_msg));
-        str_len = read(sock, name_msg, sizeof(name_msg) - 1);
+        memset(msg, 0, sizeof(msg));
+        str_len = read(sock, msg, sizeof(msg) - 1);
         if (str_len == -1)
             return (void *)-1;
 
-        name_msg[str_len] = 0;
-        if (strcmp(name_msg, "이름 중복") == 0) {
+        msg[str_len] = 0;
+
+        if (!strcmp(msg, "이름 중복")) {
             printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
             close(sock);
             exit(1);
+        } else if (!strcmp(msg, "방 번호 중복")) {
+            printf("방 번호 중복되었으니 새로운 방 번호로 시도하세요.\n");
+        } else {
+            fputs(msg, stdout);
         }
-
-        fputs(name_msg, stdout);
     }
     return NULL;
 }
@@ -108,13 +112,21 @@ void error_handling(char *msg)
 
 void welcome_message()
 {
-    printf("=========Temporary Room==========\n");
+    printf("=========방 기능==========\n");
     printf("\n 기능 리스트 (문자열)\n\n\n");
     printf("@m 방번호 : 방 만들기 \t ex) m 1\n");
     printf("@e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
     printf("@o : 방 나가기\n");
     printf("@q : 채팅웹 종료\n");
-    printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n");
+    printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n"); 
     printf("@all : 모든 사용자에게 채팅 전달하기\n");
     printf("\n================================\n\n\n");
+}
+
+void remove_newline(char *str)
+{
+    size_t len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';
+    }
 }
