@@ -90,14 +90,19 @@ void *recv_msg(void *arg)
 
         msg[str_len] = 0;
 
+        printf("error msg: %s\n",msg);
+
         if (!strcmp(msg, "이름 중복")) {
             printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
             close(sock);
             exit(1);
         } else if (!strcmp(msg, "방 번호 중복")) {
             printf("방 번호 중복되었으니 새로운 방 번호로 시도하세요.\n");
-        } else {
-            fputs(msg, stdout);
+        } else if (!strcmp(msg, "해당 방 번호가 비존재")) {
+            printf("입력한 방번호가 존재하지 않습니다. 다시 시도하세요.\n");
+        }
+        else {
+        fputs(msg, stdout);
         }
     }
     return NULL;
@@ -115,7 +120,7 @@ void welcome_message()
     printf("=========방 기능==========\n");
     printf("\n 기능 리스트 (문자열)\n\n\n");
     printf("@m 방번호 : 방 만들기 \t ex) m 1\n");
-    printf("@e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n");
+    printf("@e 방번호 : 해당 방번호 접속하기 (주의: 방번호는 0부터 100까지) \t ex) e 1\n");
     printf("@o : 방 나가기\n");
     printf("@q : 채팅웹 종료\n");
     printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n"); 
