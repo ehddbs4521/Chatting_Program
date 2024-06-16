@@ -10,14 +10,15 @@
 #define BUF_SIZE 500
 #define MAX_CLNT 256
 #define NAME_SIZE 20
-#define MAX_ROOM_COUNT 10
+#define MAX_ROOM_COUNT 100
 
 #define DUPLICATED_NAME_ERROR "이름 중복"
 #define DUPLICATED_ROOM_ERROR "방 번호 중복"
+#define NOT_EXIST_ROOM "해당 방 번호가 비존재"
 
 
 void *handle_clnt(void *arg);
-void send_msg(char *msg, char *source, int len);
+void send_msg(char *msg, char *source, int len, int clnt_sock);
 void error_handling(char *msg);
 void send_msg_only_one(char *msg, char *source, char *target,int len);
 void send_msg_all(char *msg, char *source, int len);
@@ -26,9 +27,12 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
 int check_duplicate_name(const char *name);
 void room_message(int clnt_sock);
 void make_room(char *msg, int room[], int clnt_sock);
-int check_duplicate_room(char *msg, int room[]);
+int check_duplicate_room(char *msg, int room[], int clnt_sock);
 void send_clear_msg(char *msg, int len);
 void send_welcome_msg();
+int check_exists_room(char *msg, int room[]);
+void enter_room(char *msg, int clnt_sock);
+int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -36,8 +40,9 @@ char clnt_name[NAME_SIZE];
 char clnt_names[MAX_CLNT][NAME_SIZE];
 int room_num_start = 0;
 int room_num_end = 0;
-
+int room_names[MAX_ROOM_COUNT][MAX_CLNT];
 pthread_mutex_t mutx;
+int room_clnt_socks[MAX_CLNT];
 
 int main(int argc, char *argv[])
 {
@@ -94,19 +99,37 @@ int main(int argc, char *argv[])
 
         pthread_create(&t_id, NULL, handle_clnt, (void *)&clnt_sock);
         pthread_detach(t_id);
-        printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
+        printf("Connected client IP: %s %d\n", inet_ntoa(clnt_adr.sin_addr),clnt_sock);
         printf("========================\n");
     }
     close(serv_sock);
     return 0;
 }
 
-int check_duplicate_room(char *msg, int room[MAX_ROOM_COUNT]) {
+int check_duplicate_room(char *msg, int room[MAX_ROOM_COUNT], int clnt_sock) {
+
+    int room_num=atoi(msg);
+    int start=0;
+
     for (int i = room_num_start; i < room_num_end; i++) {
-        if(room[i] == atoi(msg)){
+        if(room[i] == room_num){
             return 1;
         }
     }
+    room_names[room_num][0]=clnt_sock;
+    
+    while(1){
+        if(room_clnt_socks[start]==clnt_sock){
+            break;
+        }
+        start++;
+        if(room_clnt_socks[start]==0){
+            room_clnt_socks[start]=clnt_sock;
+            break;
+        }
+    }
+    
+
     return 0;
 }
 
@@ -119,6 +142,33 @@ int check_duplicate_name(const char *name) {
     return 0;
 }
 
+int check_exists_room(char *msg, int room[]){
+
+    int room_num=atoi(msg);
+    if(room_names[room_num][0]==0){
+        return 0;
+    }
+
+    return 1;
+    
+}
+
+int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock){
+
+
+    printf("total: %d, now clnt: %d\n",clnt_cnt,clnt_sock);
+
+    for (int i = 0; i < clnt_cnt; i++)
+    {   
+        printf("clnt: %d, room: %d\n",clnt_sock, room_clnt_socks[i]);
+        if(clnt_sock==room_clnt_socks[i]){
+            return 1;
+        }
+    }
+
+    return 0;
+    
+}
 void make_room(char *msg, int room[], int clnt_sock) {
     room[room_num_end++] = atoi(msg);
 
@@ -138,6 +188,32 @@ void make_room(char *msg, int room[], int clnt_sock) {
         }
     }
     pthread_mutex_unlock(&mutx);
+}
+
+void enter_room(char *msg, int clnt_sock){
+
+    int room_num=atoi(msg);
+    int start=0;
+
+    while(room_names[room_num][start]!=0){
+        start++;
+    }
+    
+    room_names[room_num][start]=clnt_sock;
+
+    start=0;
+
+    while(1){
+        if(room_clnt_socks[start]==clnt_sock){
+            break;
+        }
+        start++;
+        if(room_clnt_socks[start]==0){
+            room_clnt_socks[start]=clnt_sock;
+            break;
+        }
+    }
+    
 }
 
 void room_message(int clnt_sock) {
@@ -217,19 +293,34 @@ void send_welcome_msg(){
     pthread_mutex_unlock(&mutx);
 }
 
-void send_msg(char *msg, char *source, int len) {
+void send_msg(char *msg, char *source, int len, int clnt_sock) {
     int i;
     char everyone_msg[BUF_SIZE];
     snprintf(everyone_msg, sizeof(everyone_msg), "[%s] %s", source, msg);
 
+
+    for (int i = 0; i < clnt_cnt; i++)
+    {
+        printf("hey L : %d %d\n",i, clnt_socks[i]);
+    }
+    
+    for (int i = 0; i < clnt_cnt; i++)
+    {
+        printf("hey K : %d %d\n",i, room_clnt_socks[i]);
+    }
+
     pthread_mutex_lock(&mutx);
-    for (i = 0; i < clnt_cnt; i++)
-        write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
+    
+    for (i = 0; i < clnt_cnt; i++){
+        if(!exist_clnt_in_room(room_clnt_socks, clnt_socks[i])){
+            write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
+        }
+    
+    }
     pthread_mutex_unlock(&mutx);
 }
 
 void send_msg_all(char *msg, char *source, int len) {
-    send_msg(msg, source, len);
 }
 
 void send_msg_only_one(char *source, char *target, char *modified, int len) {
@@ -258,15 +349,22 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
     
     
     if(option[0] == '\0'){
-        send_msg(modified, source, strlen(modified));
+        send_msg(modified, source, strlen(modified),clnt_sock);
     }
     else if(option[1] == 'm'){
-        if(!check_duplicate_room(modified, room)){
+        if(!check_duplicate_room(modified, room, clnt_sock)){
             make_room(modified, room, clnt_sock);
         }
         else{
-            printf("3\n");
             write(clnt_sock, DUPLICATED_ROOM_ERROR, strlen(DUPLICATED_ROOM_ERROR));
+        }
+    }
+    else if(option[1] == 'e'){
+        if(check_exists_room(modified, room)){
+            enter_room(modified, clnt_sock);
+        }
+        else{
+            write(clnt_sock, NOT_EXIST_ROOM, strlen(NOT_EXIST_ROOM));
         }
     }
     else{
