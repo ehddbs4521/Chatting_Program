@@ -16,6 +16,9 @@
 #define DUPLICATED_ROOM_ERROR "방 번호 중복"
 #define NOT_EXIST_ROOM "해당 방 번호가 비존재"
 
+#define CHATTING_ROOM_NAMES "=============채팅방 접속 인원 이름=============\n"
+#define BAR "==========================================\n"
+
 
 void *handle_clnt(void *arg);
 void send_msg(char *msg, char *source, int len, int clnt_sock);
@@ -37,11 +40,13 @@ int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock);
 void send_msg_only_room(int clnt_sock, int room_num, char *msg);
 void send_clear_msg(int clnt_sock);
 void arrange_array(int data[]);
+void show_members(int clnt_sock);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
 char clnt_name[NAME_SIZE];
 char clnt_names[MAX_CLNT][NAME_SIZE];
+char clnt_sock_names[MAX_CLNT][NAME_SIZE];
 int room_num_start = 0;
 int room_num_end = 0;
 int room_names[MAX_ROOM_COUNT][MAX_CLNT];
@@ -49,7 +54,7 @@ pthread_mutex_t mutx;
 int room_clnt_socks[MAX_CLNT];
 int room[MAX_ROOM_COUNT]={0};
 int room_num = 0;
-
+int chatting_room_total = 0;
 int main(int argc, char *argv[])
 {
     int serv_sock, clnt_sock;
@@ -100,6 +105,7 @@ int main(int argc, char *argv[])
         }
 
         strcpy(clnt_names[clnt_cnt], clnt_name);
+        strcpy(clnt_sock_names[clnt_sock],clnt_name);
         clnt_socks[clnt_cnt++] = clnt_sock;
         pthread_mutex_unlock(&mutx);
 
@@ -190,6 +196,7 @@ void make_room(char *msg, int room[], int clnt_sock) {
             write(clnt_socks[i], specific_msg, strlen(specific_msg));
         }
     }
+    chatting_room_total++;
     pthread_mutex_unlock(&mutx);
 }
 
@@ -220,6 +227,8 @@ void enter_room(char *msg, int clnt_sock){
         }
     }
 
+    chatting_room_total++;
+
 }
 
 
@@ -239,6 +248,9 @@ void exit_room(int clnt_sock){
             room_names[room_num][i]=0;
         }
     }
+
+    chatting_room_total--;
+
     arrange_array(room_clnt_socks);
     arrange_array(room_names[room_num]);
 }
@@ -413,17 +425,16 @@ void send_msg_only_one(char *source, char *target, char *modified, int len) {
 
 void send_msg_only_room(int clnt_sock, int room_num, char *msg){
     
-    int total=0;
 
     for (int i = 0; i < MAX_CLNT; i++)
     {
         if(room_names[room_num][i]!=0){
-            total++;
+            chatting_room_total++;
         }
     }
     
 
-    for (int i = 0; i < total; i++)
+    for (int i = 0; i < chatting_room_total; i++)
     {   
         if(room_names[room_num][i]!=clnt_sock){
             write(room_names[room_num][i],msg,strlen(msg));
@@ -431,6 +442,18 @@ void send_msg_only_room(int clnt_sock, int room_num, char *msg){
         
     }
     
+}
+
+void show_members(int clnt_sock) {
+    write(clnt_sock, CHATTING_ROOM_NAMES, strlen(CHATTING_ROOM_NAMES));
+    for (int i = 0; i < chatting_room_total; i++) {
+        char buffer[256]; 
+        int len = snprintf(buffer, sizeof(buffer), "%s\n", clnt_sock_names[room_clnt_socks[i]]);
+        
+        write(clnt_sock, buffer, len);
+    }
+    write(clnt_sock, BAR, strlen(BAR));
+
 }
 
 void error_handling(char *msg) {
@@ -448,22 +471,17 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
     else if(option[1] == 'm'){
         if(!check_duplicate_room(modified, clnt_sock)){
             make_room(modified, room, clnt_sock);
-
-            return;
         }
         else{
             write(clnt_sock, DUPLICATED_ROOM_ERROR, strlen(DUPLICATED_ROOM_ERROR));
-            return;
         }
     }
     else if(option[1] == 'e'){
         if(check_exists_room(modified, room)){
             enter_room(modified, clnt_sock);
-            return;
         }
         else{
             write(clnt_sock, NOT_EXIST_ROOM, strlen(NOT_EXIST_ROOM));
-            return;
         }
     }
     else if(!strcmp(option,"@all")){
@@ -472,10 +490,12 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
     else if(option[1] == 'o'){
         exit_room(clnt_sock);
     }
+    else if(option[1] == 'l'){
+        show_members(clnt_sock);
+    }
     else{
         strcpy(target, option + 1);
         send_msg_only_one(source, target, modified, strlen(modified));
-        return;
     }
 }
 
@@ -510,3 +530,4 @@ void remove_first_word(const char *input, char *source, char *option, char *outp
     output[j] = '\0';
 
 }
+
