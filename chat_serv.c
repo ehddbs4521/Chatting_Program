@@ -33,6 +33,8 @@ void send_welcome_msg();
 int check_exists_room(char *msg, int room[]);
 void enter_room(char *msg, int clnt_sock);
 int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock);
+void send_msg_only_room(int clnt_sock, int room_num, char *msg);
+void send_enter_clear_msg(int clnt_sock);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -44,6 +46,7 @@ int room_names[MAX_ROOM_COUNT][MAX_CLNT];
 pthread_mutex_t mutx;
 int room_clnt_socks[MAX_CLNT];
 int room[MAX_ROOM_COUNT]={0};
+int room_num = 0;
 
 int main(int argc, char *argv[])
 {
@@ -109,7 +112,7 @@ int main(int argc, char *argv[])
 
 int check_duplicate_room(char *msg, int clnt_sock) {
 
-    int room_num=atoi(msg);
+    room_num=atoi(msg);
     int start=0;
 
     for (int i = room_num_start; i < room_num_end; i++) {
@@ -119,17 +122,16 @@ int check_duplicate_room(char *msg, int clnt_sock) {
     }
     room_names[room_num][0]=clnt_sock;
     
+
     while(1){
-        if(room_clnt_socks[start]==clnt_sock){
+        if(room_clnt_socks[start]==0){
             break;
         }
-        start++;
-        if(room_clnt_socks[start]==0){
-            room_clnt_socks[start]=clnt_sock;
-            break;
+        else{
+            start++;
         }
     }
-    
+    room_clnt_socks[start]=clnt_sock;
 
     return 0;
 }
@@ -144,7 +146,7 @@ int check_duplicate_name(const char *name) {
 }
 
 int check_exists_room(char *msg, int room[]){
-    int room_num=atoi(msg);
+    room_num=atoi(msg);
 
     for (int i = 0; i < MAX_ROOM_COUNT; i++)
     {   
@@ -158,15 +160,13 @@ int check_exists_room(char *msg, int room[]){
 }
 
 int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock){
-
-
+    
     for (int i = 0; i < clnt_cnt; i++)
     {   
         if(clnt_sock==room_clnt_socks[i]){
             return 1;
         }
     }
-
     return 0;
     
 }
@@ -193,6 +193,9 @@ void make_room(char *msg, int room[], int clnt_sock) {
 
 void enter_room(char *msg, int clnt_sock){
 
+    send_enter_clear_msg(clnt_sock);
+    room_message(clnt_sock);
+
     int room_num=atoi(msg);
     int start=0;
 
@@ -214,7 +217,13 @@ void enter_room(char *msg, int clnt_sock){
             break;
         }
     }
-    
+
+}
+
+
+
+void exit_room(int clnt_sock,int room_clnt_socks[],int room[]){
+
 }
 
 void room_message(int clnt_sock) {
@@ -264,6 +273,12 @@ void *handle_clnt(void *arg) {
     close(clnt_sock);
     return NULL;
 }
+void send_enter_clear_msg(int clnt_sock){
+    int i;
+    pthread_mutex_lock(&mutx);
+    write(clnt_sock, "\033[H\033[J\n", strlen("\033[H\033[J\n"));
+    pthread_mutex_unlock(&mutx);
+}
 
 void send_clear_msg(char *msg, int len){
     int i;
@@ -295,17 +310,26 @@ void send_welcome_msg(){
 
 void send_msg(char *msg, char *source, int len, int clnt_sock) {
     int i;
+    int flag = 1;
     char everyone_msg[BUF_SIZE];
     snprintf(everyone_msg, sizeof(everyone_msg), "[%s] %s", source, msg);
 
     pthread_mutex_lock(&mutx);
-    
+
+    flag=exist_clnt_in_room(room_clnt_socks, clnt_sock);
+
     for (i = 0; i < clnt_cnt; i++){
-        if(!exist_clnt_in_room(room_clnt_socks, clnt_socks[i])){
-            write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
+
+        if(!flag){
+            if(!exist_clnt_in_room(room_clnt_socks, clnt_socks[i])){
+                write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
+            }
+        }else{
+            send_msg_only_room(clnt_sock,room_num,everyone_msg);
+            break;
         }
-    
     }
+    
     pthread_mutex_unlock(&mutx);
 }
 
@@ -326,6 +350,28 @@ void send_msg_only_one(char *source, char *target, char *modified, int len) {
         }
     }
     pthread_mutex_unlock(&mutx);
+}
+
+void send_msg_only_room(int clnt_sock, int room_num, char *msg){
+    
+    int total=0;
+
+    for (int i = 0; i < MAX_CLNT; i++)
+    {
+        if(room_names[room_num][i]!=0){
+            total++;
+        }
+    }
+    
+
+    for (int i = 0; i < total; i++)
+    {   
+        if(room_names[room_num][i]!=clnt_sock){
+            write(room_names[room_num][i],msg,strlen(msg));
+        }
+        
+    }
+    
 }
 
 void error_handling(char *msg) {
@@ -352,8 +398,6 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
         }
     }
     else if(option[1] == 'e'){
-        int k=check_exists_room(modified, room);
-        printf("k: %d\n",k);
         if(check_exists_room(modified, room)){
             enter_room(modified, clnt_sock);
             return;
@@ -401,3 +445,4 @@ void remove_first_word(const char *input, char *source, char *option, char *outp
     output[j] = '\0';
 
 }
+

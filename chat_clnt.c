@@ -90,7 +90,6 @@ void *recv_msg(void *arg)
 
         msg[str_len] = 0;
 
-        printf("error msg: %s\n",msg);
 
         if (!strcmp(msg, "이름 중복")) {
             printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
@@ -135,3 +134,4 @@ void remove_newline(char *str)
         str[len - 1] = '\0';
     }
 }
+
