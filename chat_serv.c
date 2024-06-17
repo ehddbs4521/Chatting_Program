@@ -28,13 +28,15 @@ int check_duplicate_name(const char *name);
 void room_message(int clnt_sock);
 void make_room(char *msg, int room[], int clnt_sock);
 int check_duplicate_room(char *msg, int clnt_sock);
-void send_clear_msg(char *msg, int len);
-void send_welcome_msg();
+void send_every_clear_msg(char *msg, int len);
+void send_every_welcome_msg();
+void send_welcome_msg(int clnt_sock);
 int check_exists_room(char *msg, int room[]);
 void enter_room(char *msg, int clnt_sock);
 int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock);
 void send_msg_only_room(int clnt_sock, int room_num, char *msg);
-void send_enter_clear_msg(int clnt_sock);
+void send_clear_msg(int clnt_sock);
+void arrange_array(int data[]);
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -193,7 +195,7 @@ void make_room(char *msg, int room[], int clnt_sock) {
 
 void enter_room(char *msg, int clnt_sock){
 
-    send_enter_clear_msg(clnt_sock);
+    send_clear_msg(clnt_sock);
     room_message(clnt_sock);
 
     int room_num=atoi(msg);
@@ -222,8 +224,34 @@ void enter_room(char *msg, int clnt_sock){
 
 
 
-void exit_room(int clnt_sock,int room_clnt_socks[],int room[]){
+void exit_room(int clnt_sock){
 
+    send_clear_msg(clnt_sock);
+    send_welcome_msg(clnt_sock);
+
+    for (int i = 0; i < MAX_CLNT; i++)
+    {
+        if(room_clnt_socks[i]==clnt_sock){
+            room_clnt_socks[i]=0;
+        }
+
+        if(room_names[room_num][i]==clnt_sock){
+            room_names[room_num][i]=0;
+        }
+    }
+    arrange_array(room_clnt_socks);
+    arrange_array(room_names[room_num]);
+}
+
+void arrange_array(int data[]){
+
+    for (int i = 0; i < MAX_CLNT+1; i++)
+    {
+        if(data[i]==0){
+            data[i]=data[i+1];
+        }
+    }
+    
 }
 
 void room_message(int clnt_sock) {
@@ -250,8 +278,8 @@ void *handle_clnt(void *arg) {
         char option[BUF_SIZE] = {0};
         remove_first_word(msg, source, option, modified);
         if(!strcmp(option, "@m")){
-            send_clear_msg("\033[H\033[J",strlen("\033[H\033[J"));
-            send_welcome_msg();
+            send_every_clear_msg("\033[H\033[J",strlen("\033[H\033[J"));
+            send_every_welcome_msg();
         }
 
         check_annotation_option(option, source, target, modified, room, clnt_sock);
@@ -273,14 +301,14 @@ void *handle_clnt(void *arg) {
     close(clnt_sock);
     return NULL;
 }
-void send_enter_clear_msg(int clnt_sock){
+void send_clear_msg(int clnt_sock){
     int i;
     pthread_mutex_lock(&mutx);
     write(clnt_sock, "\033[H\033[J\n", strlen("\033[H\033[J\n"));
     pthread_mutex_unlock(&mutx);
 }
 
-void send_clear_msg(char *msg, int len){
+void send_every_clear_msg(char *msg, int len){
     int i;
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++)
@@ -288,7 +316,7 @@ void send_clear_msg(char *msg, int len){
     pthread_mutex_unlock(&mutx);
 }
 
-void send_welcome_msg(){
+void send_every_welcome_msg(){
     int i;
     char specific_msg[BUF_SIZE];
     snprintf(specific_msg, sizeof(specific_msg),
@@ -305,6 +333,25 @@ void send_welcome_msg(){
     pthread_mutex_lock(&mutx);
     for (i = 0; i < clnt_cnt; i++)
         write(clnt_socks[i], specific_msg, strlen(specific_msg));
+    pthread_mutex_unlock(&mutx);
+}
+
+void send_welcome_msg(int clnt_sock){
+    int i;
+    char specific_msg[BUF_SIZE];
+    snprintf(specific_msg, sizeof(specific_msg),
+        "=========방 기능==========\n"
+        "\n 기능 리스트 (문자열)\n\n\n"
+        "@m 방번호 : 방 만들기 \t ex) m 1\n"
+        "@e 방번호 : 해당 방번호 접속하기 \t ex) e 1\n"
+        "@o : 방 나가기\n"
+        "@q : 채팅웹 종료\n"
+        "@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n"
+        "@all : 모든 사용자에게 채팅 전달하기\n"
+        "\n================================\n\n\n"
+        );
+    pthread_mutex_lock(&mutx);
+    write(clnt_sock, specific_msg, strlen(specific_msg));
     pthread_mutex_unlock(&mutx);
 }
 
@@ -422,6 +469,9 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
     else if(!strcmp(option,"@all")){
         send_msg_all(modified,source,clnt_sock);
     }
+    else if(option[1] == 'o'){
+        exit_room(clnt_sock);
+    }
     else{
         strcpy(target, option + 1);
         send_msg_only_one(source, target, modified, strlen(modified));
@@ -460,4 +510,3 @@ void remove_first_word(const char *input, char *source, char *option, char *outp
     output[j] = '\0';
 
 }
-
