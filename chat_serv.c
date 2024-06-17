@@ -21,7 +21,7 @@ void *handle_clnt(void *arg);
 void send_msg(char *msg, char *source, int len, int clnt_sock);
 void error_handling(char *msg);
 void send_msg_only_one(char *msg, char *source, char *target,int len);
-void send_msg_all(char *msg, char *source, int len);
+void send_msg_all(char *msg, char *source, int clnt_sock);
 void remove_first_word(const char *input, char *source, char *option, char *output);
 void check_annotation_option(char *option, char * source, char *target, char *modified, int room[], int clnt_sock);
 int check_duplicate_name(const char *name);
@@ -333,7 +333,19 @@ void send_msg(char *msg, char *source, int len, int clnt_sock) {
     pthread_mutex_unlock(&mutx);
 }
 
-void send_msg_all(char *msg, char *source, int len) {
+void send_msg_all(char *msg, char *source, int clnt_sock) {
+
+    char everyone_msg[BUF_SIZE];
+    snprintf(everyone_msg, sizeof(everyone_msg), "[%s] %s", source, msg);
+
+    pthread_mutex_lock(&mutx);
+        for (int i = 0; i < clnt_cnt; i++) {
+            if (clnt_socks[i]!=clnt_sock) {
+                write(clnt_socks[i], everyone_msg, strlen(everyone_msg));
+            }
+        }
+    pthread_mutex_unlock(&mutx);
+
 }
 
 void send_msg_only_one(char *source, char *target, char *modified, int len) {
@@ -406,6 +418,9 @@ void check_annotation_option(char *option, char * source, char *target, char *mo
             write(clnt_sock, NOT_EXIST_ROOM, strlen(NOT_EXIST_ROOM));
             return;
         }
+    }
+    else if(!strcmp(option,"@all")){
+        send_msg_all(modified,source,clnt_sock);
     }
     else{
         strcpy(target, option + 1);
