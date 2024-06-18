@@ -9,6 +9,11 @@
 #define BUF_SIZE 500
 #define NAME_SIZE 20
 
+#define DUPLICATED_NAME_ERROR "이름 중복\n"
+#define DUPLICATED_ROOM_ERROR "방 번호 중복\n"
+#define NOT_EXIST_ROOM "해당 방 번호가 비존재\n"
+#define WRONG_KEY "키 오류\n"
+
 void *send_msg(void *arg);
 void *recv_msg(void *arg);
 void error_handling(char *msg);
@@ -63,7 +68,6 @@ void *send_msg(void *arg)
     char name_msg[NAME_SIZE + BUF_SIZE];
 
     welcome_message();
-
     while (1) {
         fgets(msg, BUF_SIZE, stdin);
         if (!strcmp(msg, "@q\n") || !strcmp(msg, "@Q\n")) {
@@ -91,17 +95,19 @@ void *recv_msg(void *arg)
         msg[str_len] = 0;
 
 
-        if (!strcmp(msg, "이름 중복")) {
+        if (!strcmp(msg, DUPLICATED_NAME_ERROR)) {
             printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
             close(sock);
             exit(1);
-        } else if (!strcmp(msg, "방 번호 중복")) {
+        } else if (!strcmp(msg, DUPLICATED_ROOM_ERROR)) {
             printf("방 번호 중복되었으니 새로운 방 번호로 시도하세요.\n");
-        } else if (!strcmp(msg, "해당 방 번호가 비존재")) {
+        } else if (!strcmp(msg, NOT_EXIST_ROOM)) {
             printf("입력한 방번호가 존재하지 않습니다. 다시 시도하세요.\n");
+        } else if (!strcmp(msg, WRONG_KEY)){
+            printf("키가 틀렸습니다. 다시 시도하세요.\n");
         }
         else {
-        fputs(msg, stdout);
+            fputs(msg, stdout);
         }
     }
     return NULL;
@@ -134,4 +140,5 @@ void remove_newline(char *str)
         str[len - 1] = '\0';
     }
 }
+
 
