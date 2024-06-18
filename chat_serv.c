@@ -357,10 +357,6 @@ void exit_room(int clnt_sock)
             room_clnt_socks[i] = 0;
         }
 
-        if (room[i] == room_num)
-        {
-            room[i] = 0;
-        }
         if (room_names[room_num][i] == clnt_sock)
         {
             room_names[room_num][i] = 0;
@@ -640,14 +636,13 @@ void pay_money(int clnt_sock, char *msg, char *source)
     clnt_money[target_sock][0] += withdraw_money;
     clnt_money[clnt_sock][0] -= withdraw_money;
 
-    snprintf(everyone_msg, sizeof(everyone_msg), BAR, "%s의 현재 남은 잔액: %d원\n", BAR, source, clnt_money[clnt_sock][0]);
+    snprintf(everyone_msg, sizeof(everyone_msg), BAR "%s의 현재 남은 잔액: %d원\n" BAR, source, clnt_money[clnt_sock][0]);
     write(clnt_sock, everyone_msg, strlen(everyone_msg));
 
     snprintf(everyone_msg, sizeof(everyone_msg), "");
 
-    snprintf(everyone_msg, sizeof(everyone_msg), BAR, "%s님으로부터 %d원 입금\n"
-                                                      "%s의 현재 남은 잔액: %d원\n",
-             BAR,
+    snprintf(everyone_msg, sizeof(everyone_msg), BAR "%s님으로부터 %d원 입금\n"
+                                                     "%s의 현재 남은 잔액: %d원\n" BAR,
              source, withdraw_money, target, clnt_money[target_sock][0]);
 
     write(target_sock, everyone_msg, strlen(everyone_msg));
@@ -662,7 +657,6 @@ void error_handling(char *msg)
 
 void check_annotation_option(char *option, char *source, char *target, char *modified, int room[], int clnt_sock)
 {
-
     if (option[0] == '\0')
     {
         send_msg(modified, source, strlen(modified), clnt_sock);
@@ -703,7 +697,7 @@ void check_annotation_option(char *option, char *source, char *target, char *mod
     {
         show_members(clnt_sock);
     }
-    else if (option[1] == 'd')
+    else if (strlen(option) == 2 && option[1] == 'd')
     {
         dutch_pay(clnt_sock, modified);
     }
