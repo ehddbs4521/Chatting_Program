@@ -6,24 +6,22 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#define BUF_SIZE 500
-#define NAME_SIZE 20
+#define BUF_SIZE 500 // 버프 크기
+#define NAME_SIZE 20 // 최대 사용자 수
 
-#define DUPLICATED_NAME_ERROR "이름 중복\n"
-#define DUPLICATED_ROOM_ERROR "방 번호 중복\n"
-#define NOT_EXIST_ROOM "해당 방 번호가 비존재\n"
-#define WRONG_KEY "키 오류\n"
-#define NOT_EXIST_CLIENT "해당 이름의 이용자 비존재\n"
-#define Not_ENOUGH_CACHE "잔액 부족\n"
+#define DUPLICATED_NAME_ERROR "이름 중복\n" // 이름 중복 메시지
+#define DUPLICATED_ROOM_ERROR "방 번호 중복\n" // 방번호 중복 메시지
+#define NOT_EXIST_ROOM "해당 방 번호 부재\n" // 방번호 부재 메시지
+#define WRONG_KEY "키 오류\n" // 키 오류 메시지
+#define NOT_EXIST_CLIENT "해당 이름의 사용자 부재\n" // 사용자 부재 메시지
+#define NOT_ENOUGH_CACHE "잔액 부족\n" // 잔액 부족 메시지
 
-void *send_msg(void *arg);
-void *recv_msg(void *arg);
-void error_handling(char *msg);
-void welcome_message();
-void remove_newline(char *str);
-
-char name[NAME_SIZE] = "[DEFAULT]";
-char msg[BUF_SIZE];
+void *send_msg(void *arg); // 메시지를 전송하는 로직
+void *recv_msg(void *arg); // 메시지를 수신하는 로직
+void error_handling(char *msg); // 연결 에러 핸들링 로직
+void welcome_message(); // 사용자가 프로그램 접속 시 받는 메시지 로직
+char name[NAME_SIZE] = "[DEFAULT]"; // 사용자 이름이 담긴 배열
+char msg[BUF_SIZE]; // 사용자가 입력한 메시지가 담긴 배열
 
 int main(int argc, char *argv[])
 {
@@ -38,8 +36,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // 사용자 이름이 명령어와 동일하지 않도록 확인
-    if (!strcmp(argv[3], "all") || !strcmp(argv[3], "m") || !strcmp(argv[3], "l"))
+    
+    if (!strcmp(argv[3], "all") || !strcmp(argv[3], "m") || !strcmp(argv[3], "l") || !strcmp(argv[3], "d") || !strcmp(argv[3], "p") || !strcmp(argv[3], "o") || !strcmp(argv[3], "e")) // 사용자 이름이 명령어와 동일하지 않도록 확인
     {
         printf("사용자의 이름이 명령어와 같으면 안됩니다.\n");
         exit(1);
@@ -75,7 +73,7 @@ void *send_msg(void *arg)
     while (1)
     {
         fgets(msg, BUF_SIZE, stdin);
-        if (!strcmp(msg, "@q\n") || !strcmp(msg, "@Q\n"))
+        if (!strcmp(msg, "@q\n") || !strcmp(msg, "@Q\n")) // 사용자가 '@q'나 'Q' 입력시 프로그램 종료
         {
             close(sock);
             exit(0);
@@ -99,7 +97,7 @@ void *recv_msg(void *arg)
             return (void *)-1;
 
         msg[str_len] = 0;
-
+        // 서버에서 보낸 오류 메시지들을 parsing하여 해당 메시지와 같으면 오류 출력
         if (!strcmp(msg, DUPLICATED_NAME_ERROR))
         {
             printf("이름이 중복되었으니 새로운 이름으로 시도하세요.\n");
@@ -122,7 +120,7 @@ void *recv_msg(void *arg)
         {
             printf("해당 사용자가 존재하지 않습니다. 다시 시도하세요.\n");
         }
-        else if (!strcmp(msg, Not_ENOUGH_CACHE))
+        else if (!strcmp(msg, NOT_ENOUGH_CACHE))
         {
             printf("잔액이 부족합니다. 다시 시도하세요.\n");
         }
@@ -152,13 +150,4 @@ void welcome_message()
     printf("@a 사용자명: 해당 사용자에게 귓속말하기 \t ex) @동윤 hello\n");
     printf("@all : 모든 사용자에게 채팅 전달하기\n");
     printf("\n================================\n\n\n");
-}
-
-void remove_newline(char *str)
-{
-    size_t len = strlen(str);
-    if (len > 0 && str[len - 1] == '\n')
-    {
-        str[len - 1] = '\0';
-    }
 }
