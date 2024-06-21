@@ -7,12 +7,12 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define BUF_SIZE 500 // 버프 크기
-#define MAX_CLNT 256 // 최대 사용자 수
-#define NAME_SIZE 20 // 최대 이름 길이
+#define BUF_SIZE 500  // 버프 크기
+#define MAX_CLNT 256  // 최대 사용자 수
+#define NAME_SIZE 20  // 최대 이름 길이
 #define MAX_ROOM_KEY_LENGTH 4 // 최대 방 키 길이
 #define MAX_ROOM_COUNT 100 // 최대 채팅방 갯수
-#define DEFAULT_MONEY 10000 // 접속시 기본으로 생성되는 금액
+#define DEFAULT_MONEY 10000  // 접속시 기본으로 생성되는 금액
 
 #define DUPLICATED_NAME_ERROR "이름 중복\n" // 이름 중복 메시지
 #define DUPLICATED_ROOM_ERROR "방 번호 중복\n" // 방번호 중복 메시지
@@ -27,7 +27,7 @@
 void *handle_clnt(void *arg); // 사용자의 메시지에 따른 로직
 void send_msg(char *msg, char *source, int len, int clnt_sock); // 임시방에있는 사용자끼리 채팅하는 로직
 void error_handling(char *msg); // 연결 에러 핸들링 로직
-void send_msg_only_one(char *msg, char *source, char *target, int len); // 귓속말 로직
+void send_msg_only_one(char *msg, char *source, char *target, int len, int clnt_sock); // 귓속말 로직
 void send_msg_all(char *msg, char *source, int clnt_sock); // 모든 사람에게 메시지 전달하는 로직
 void remove_first_word(char *input, char *source, char *option, char *output); // 사용자의 메시지를 전송자, 타겟, 옵션, 내용 등을 분할하는 로직
 void check_annotation_option(char *option, char *source, char *target, char *modified, int room[], int clnt_sock); // 옵션에 따른 로직
@@ -40,7 +40,7 @@ void send_every_welcome_msg(); // 모든 사용자에게 웰컴 메시지를 전
 void send_welcome_msg(int clnt_sock); // 임시방에있는 사용자에게 웰컴 메시지를 전달하는 로직
 int check_exists_room(char *msg, int room[]); // 사용자가 채팅방에 접속을 할 때 입력한 채팅방 번호가 존재하는지 검증하는 로직
 void enter_room(char *msg, int clnt_sock); // 채팅방에 접속하는 로직
-int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock); // 사용자가 현재 채팅방에 접속해있는 사용자인지 검증하는 로직
+int exist_clnt_in_room(int room_clnt_socks[], int clnt_sock);  // 사용자가 현재 채팅방에 접속해있는 사용자인지 검증하는 로직
 void send_msg_only_room(int clnt_sock, int room_num, char *msg); // 채팅방에 접속해있는 사용자들끼리 채팅하는 로직
 void send_clear_msg(int clnt_sock); // 임시방 or 채팅방을 접속 할 때 화면을 clear하는 로직
 void arrange_array(int data[]); // 사용자가 방을 나갔을 시 채팅방에 접속한 인원에 대한 정보 삭제하는 로직
@@ -59,7 +59,7 @@ int room_num_end = 0; // 방 번호 끝
 int room_names[MAX_ROOM_COUNT][MAX_CLNT]; // 방 번호와 방 이름 배열
 int clnt_money[MAX_CLNT][1] = {0}; // 사용자의 소켓 번호와 잔고 배열
 pthread_mutex_t mutx;
-int room_clnt_socks[MAX_CLNT]; // 채팅방에 접속해있는 사용자의 소켓 번호 배열
+int room_clnt_socks[MAX_CLNT];  // 채팅방에 접속해있는 사용자의 소켓 번호 배열
 int room[MAX_ROOM_COUNT] = {0}; // 방 번호 배열
 int room_num = 0; // 현재 접속한 방 번호
 int chatting_room_total = 0; // 채팅방에 접속해있는 사용자 수
@@ -120,10 +120,10 @@ int main(int argc, char *argv[])
             printf("접속한 사용자명: %s\n", clnt_name);
         }
 
-        strcpy(clnt_names[clnt_cnt], clnt_name); // 사용자 이름 저장
+        strcpy(clnt_names[clnt_cnt], clnt_name);       // 사용자 이름 저장
         strcpy(clnt_sock_names[clnt_sock], clnt_name); // 사용자 소켓 번호와 이름 저장
-        clnt_socks[clnt_cnt++] = clnt_sock; // 사용자 소켓 번호 저장
-        clnt_money[clnt_sock][0] = DEFAULT_MONEY; // 접속시 디폴트 금액 설정
+        clnt_socks[clnt_cnt++] = clnt_sock;            // 사용자 소켓 번호 저장
+        clnt_money[clnt_sock][0] = DEFAULT_MONEY;      // 접속시 디폴트 금액 설정
         pthread_mutex_unlock(&mutx);
 
         pthread_create(&t_id, NULL, handle_clnt, (void *)&clnt_sock);
@@ -164,11 +164,11 @@ int check_duplicate_room(char *msg, int clnt_sock)
     {
         if (room_clnt_socks[start] == 0)
         {
-            break;  
+            break;
         }
         else
         {
-            start++;    
+            start++;
         }
     }
     room_clnt_socks[start] = clnt_sock; // 채팅방에 접속중인 사용자 리스트에 채팅방 생성자의 소켓 번호 할당
@@ -204,7 +204,7 @@ int check_exists_room(char *msg, int room[])
 
     for (int i = 0; i < MAX_ROOM_COUNT; i++)
     {
-        if (room[i] == typed_room_num) //사용자가 입력한 방번호가 방번호들이 담긴 배열에있는지 검증
+        if (room[i] == typed_room_num) // 사용자가 입력한 방번호가 방번호들이 담긴 배열에있는지 검증
         {
             return 1;
         }
@@ -290,7 +290,7 @@ void make_room(char *msg, int room[], int clnt_sock)
     {
         if (clnt_socks[i] == clnt_sock)
         {
-            room_message(clnt_sock); // 방 생성자에게 방에 접속했다는 메시지 전송 
+            room_message(clnt_sock); // 방 생성자에게 방에 접속했다는 메시지 전송
         }
         else
         {
@@ -313,7 +313,7 @@ void enter_room(char *msg, int clnt_sock)
     }
     else
     {
-        room_message(clnt_sock); 
+        room_message(clnt_sock);
         int room_num = atoi(msg);
         int start = 0;
 
@@ -347,8 +347,8 @@ void enter_room(char *msg, int clnt_sock)
 void exit_room(int clnt_sock)
 {
 
-    send_clear_msg(clnt_sock); // 해당 사용자의 터미널을 clear
-    send_welcome_msg(clnt_sock); // 임시 방 접속시 welcome 메시지 전송 
+    send_clear_msg(clnt_sock);   // 해당 사용자의 터미널을 clear
+    send_welcome_msg(clnt_sock); // 임시 방 접속시 welcome 메시지 전송
 
     for (int i = 0; i < MAX_CLNT; i++)
     {
@@ -365,7 +365,7 @@ void exit_room(int clnt_sock)
 
     chatting_room_total--; // 현재 채팅방에 접속해있는 인원 수 감소
 
-    arrange_array(room_clnt_socks); // 기존 사용자의 소켓 번호 인덱스 값을 0으로 세팅해주었기에 뒤의 0이 아닌 값들을 모두 앞으로 당김
+    arrange_array(room_clnt_socks);      // 기존 사용자의 소켓 번호 인덱스 값을 0으로 세팅해주었기에 뒤의 0이 아닌 값들을 모두 앞으로 당김
     arrange_array(room_names[room_num]); // 기존 방 번호 인덱스 값을 0으로 세팅해주었기에 뒤의 0이 아닌 값들을 모두 앞으로 당김
 }
 
@@ -405,7 +405,7 @@ void *handle_clnt(void *arg)
 
         char modified[BUF_SIZE] = {0};
         char option[BUF_SIZE] = {0};
-        remove_first_word(msg, source, option, modified); // 사용자가 입력한 문자들을 알맞는 배열에 할당
+        remove_first_word(msg, source, option, modified);                           // 사용자가 입력한 문자들을 알맞는 배열에 할당
         check_annotation_option(option, source, target, modified, room, clnt_sock); // 옵션에 따른 로직
     }
 
@@ -529,9 +529,10 @@ void send_msg_all(char *msg, char *source, int clnt_sock)
     pthread_mutex_unlock(&mutx);
 }
 
-void send_msg_only_one(char *source, char *target, char *modified, int len)
+void send_msg_only_one(char *source, char *target, char *modified, int len, int clnt_sock)
 {
     int i;
+    int flag = 0;
 
     char specific_msg[BUF_SIZE];
     snprintf(specific_msg, sizeof(specific_msg), "%s >> %s", source, modified);
@@ -542,8 +543,14 @@ void send_msg_only_one(char *source, char *target, char *modified, int len)
         if (!strcmp(clnt_names[i], target)) // 사용자가 입력한 타겟이 사용자 이름에 담긴 배열에 저장되있는지 검증
         {
             write(clnt_socks[i], specific_msg, strlen(specific_msg)); // 저장되있으면 해당 타겟에게 메시지 전송
+            flag = 1;
             break;
         }
+    }
+
+    if (!flag)
+    {
+        write(clnt_sock, NOT_EXIST_CLIENT, strlen(NOT_EXIST_CLIENT));
     }
     pthread_mutex_unlock(&mutx);
 }
@@ -568,7 +575,7 @@ void show_members(int clnt_sock)
         char buffer[256];
         int len = snprintf(buffer, sizeof(buffer), "%s\n", clnt_sock_names[room_clnt_socks[i]]); // 해당 방 번호의 소켓 번호들을 이름 배열이 담긴 배열에서 추출
 
-        write(clnt_sock, buffer, len); 
+        write(clnt_sock, buffer, len);
     }
     write(clnt_sock, BAR, strlen(BAR));
 }
@@ -634,7 +641,7 @@ void pay_money(int clnt_sock, char *msg, char *source)
     }
 
     clnt_money[target_sock][0] += withdraw_money; // 상대방의 계좌는 이체금액만큼 증가
-    clnt_money[clnt_sock][0] -= withdraw_money; // 본인의 계좌는 이체금액만큼 감소
+    clnt_money[clnt_sock][0] -= withdraw_money;   // 본인의 계좌는 이체금액만큼 감소
 
     snprintf(everyone_msg, sizeof(everyone_msg), BAR "%s의 현재 남은 잔액: %d원\n" BAR, source, clnt_money[clnt_sock][0]);
     write(clnt_sock, everyone_msg, strlen(everyone_msg));
@@ -657,7 +664,7 @@ void error_handling(char *msg) // 연결 관련 에러 메시지 전송
 
 void check_annotation_option(char *option, char *source, char *target, char *modified, int room[], int clnt_sock)
 {
-    if (option[0] == '\0') // option이 없을 시 채팅 
+    if (option[0] == '\0') // option이 없을 시 채팅
     {
         send_msg(modified, source, strlen(modified), clnt_sock);
     }
@@ -697,7 +704,7 @@ void check_annotation_option(char *option, char *source, char *target, char *mod
     {
         show_members(clnt_sock);
     }
-    else if (strlen(option)==2 && option[1]=='d') // option이 'd'일 시 접속 중인 채팅방 인원들에게 입력한 금액과 더치페이 한 금액 공지
+    else if (strlen(option) == 2 && option[1] == 'd') // option이 'd'일 시 접속 중인 채팅방 인원들에게 입력한 금액과 더치페이 한 금액 공지
     {
         dutch_pay(clnt_sock, modified);
     }
@@ -708,19 +715,18 @@ void check_annotation_option(char *option, char *source, char *target, char *mod
     else
     {
         strcpy(target, option + 1);
-        send_msg_only_one(source, target, modified, strlen(modified)); // 귓속말 
+        send_msg_only_one(source, target, modified, strlen(modified), clnt_sock); // 귓속말
     }
 }
 
 void remove_first_word(char *input, char *source, char *option, char *output)
 {
     /*
-        
+
         ex) dy가 son에게 5000원을 이체하고싶어서 dy는 터미널로 @d son 3000을 입력
-    
+
         => input: dy @d son 3000이 됨
     */
-
 
     int i = 0, j = 0, k = 0;
 
@@ -757,4 +763,3 @@ void remove_first_word(char *input, char *source, char *option, char *output)
 
     output[j] = '\0';
 }
-
