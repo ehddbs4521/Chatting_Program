@@ -763,3 +763,4 @@ void remove_first_word(char *input, char *source, char *option, char *output)
 
     output[j] = '\0';
 }
+
