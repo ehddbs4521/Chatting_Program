@@ -29,9 +29,9 @@ void send_msg(char *msg, char *source, int len, int clnt_sock); // 임시방에�
 void error_handling(char *msg); // 연결 에러 핸들링 로직
 void send_msg_only_one(char *msg, char *source, char *target, int len); // 귓속말 로직
 void send_msg_all(char *msg, char *source, int clnt_sock); // 모든 사람에게 메시지 전달하는 로직
-void remove_first_word(const char *input, char *source, char *option, char *output); // 사용자의 메시지를 전송자, 타겟, 옵션, 내용 등을 분할하는 로직
+void remove_first_word(char *input, char *source, char *option, char *output); // 사용자의 메시지를 전송자, 타겟, 옵션, 내용 등을 분할하는 로직
 void check_annotation_option(char *option, char *source, char *target, char *modified, int room[], int clnt_sock); // 옵션에 따른 로직
-int check_duplicate_name(const char *name); // 접속 시 사용자의 이름이 현재 접속해있는 사용자들의 이름과 충돌이 일어나는지 검증하는 로직
+int check_duplicate_name(char *name); // 접속 시 사용자의 이름이 현재 접속해있는 사용자들의 이름과 충돌이 일어나는지 검증하는 로직
 void room_message(int clnt_sock); // 채팅방에 접속했을 시 나타나는 메시지 로직
 void make_room(char *msg, int room[], int clnt_sock); // 채팅방 만드는 로직
 int check_duplicate_room(char *msg, int clnt_sock); // 채팅방을 만들때 방의 이름이 다른 채팅방의 이름과 충돌이 일어나는지 검증하는 로직
@@ -176,7 +176,7 @@ int check_duplicate_room(char *msg, int clnt_sock)
     return 0;
 }
 
-int check_duplicate_name(const char *name)
+int check_duplicate_name(char *name)
 {
     for (int i = 0; i < clnt_cnt; i++)
     {
@@ -712,7 +712,7 @@ void check_annotation_option(char *option, char *source, char *target, char *mod
     }
 }
 
-void remove_first_word(const char *input, char *source, char *option, char *output)
+void remove_first_word(char *input, char *source, char *option, char *output)
 {
     /*
         
