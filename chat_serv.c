@@ -139,14 +139,14 @@ int check_duplicate_room(char *msg, int clnt_sock)
 {
 
     char *token;
-    char *msg_copy = strdup(msg);
+    char *msg_copy = strdup(msg); // msg를 msg_copy에 복사
     room_num = 0;
 
-    token = strtok(msg_copy, " ");
+    token = strtok(msg_copy, " "); // 띄어쓰기로 msg_copy로 앞부분 분할
 
     if (token != NULL)
     {
-        room_num = atoi(token);
+        room_num = atoi(token); // 정수형 변환
     }
 
     int start = 0;
@@ -191,15 +191,15 @@ int check_duplicate_name(char *name)
 int check_exists_room(char *msg, int room[])
 {
 
-    char *msg_copy = strdup(msg);
+    char *msg_copy = strdup(msg); // msg를 msg_copy에 복사
     char *token;
     int typed_room_num = 0;
 
-    token = strtok(msg_copy, " ");
+    token = strtok(msg_copy, " "); // 띄어쓰기로 msg_copy로 앞부분 분할
 
     if (token != NULL)
     {
-        typed_room_num = atoi(token);
+        typed_room_num = atoi(token); // 정수형으로 변환
     }
 
     for (int i = 0; i < MAX_ROOM_COUNT; i++)
@@ -230,22 +230,22 @@ int check_room_key(char *msg)
 {
 
     char *token;
-    char *msg_copy = strdup(msg);
+    char *msg_copy = strdup(msg); // msg를 msg_copy에 복사
 
     int typed_room = 0;
     int typed_key = 0;
 
-    token = strtok(msg_copy, " ");
+    token = strtok(msg_copy, " "); // 띄어쓰기로 msg_copy로 앞부분 분할
 
     if (token != NULL)
     {
-        typed_room = atoi(token);
+        typed_room = atoi(token); // 정수형으로 변환
     }
 
-    token = strtok(NULL, " ");
+    token = strtok(NULL, " "); // 분할 후 msg_copy의 뒷부분을 가져옴
     if (token != NULL)
     {
-        typed_key = atoi(token);
+        typed_key = atoi(token); // 정수형으로 변환
     }
 
     if (typed_key != room_key[typed_room][0]) // 해당 방번호에 설정해놓은 방 키와 사용자가 입력한 방 키가 같은지 검증
@@ -259,19 +259,19 @@ int check_room_key(char *msg)
 void make_room(char *msg, int room[], int clnt_sock)
 {
 
-    char *msg_copy = strdup(msg);
+    char *msg_copy = strdup(msg); // msg를 msg_copy에 복사
     char *token;
 
-    token = strtok(msg_copy, " ");
+    token = strtok(msg_copy, " "); // 띄어쓰기로 msg_copy로 앞부분 분할
     if (token != NULL)
     {
-        room_num = atoi(token);
+        room_num = atoi(token); // 정수형으로 변환
     }
 
-    token = strtok(NULL, " ");
+    token = strtok(NULL, " "); // 분할 후 msg_copy의 뒷부분을 가져옴
     if (token != NULL)
     {
-        key = atoi(token);
+        key = atoi(token); // 정수형으로 변환
     }
 
     room[room_num_end++] = room_num; // 방 번호가 담긴 배열에 사용자가 생성한 방 번호 할당

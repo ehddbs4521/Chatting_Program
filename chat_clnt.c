@@ -151,3 +151,4 @@ void welcome_message()
     printf("@all : 모든 사용자에게 채팅 전달하기\n");
     printf("\n================================\n\n\n");
 }
+
